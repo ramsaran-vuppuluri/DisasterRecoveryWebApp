@@ -2,6 +2,8 @@ import json
 import plotly
 import pandas as pd
 
+import re
+
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
@@ -11,8 +13,8 @@ from plotly.graph_objs import Bar
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
-
 app = Flask(__name__)
+
 
 def tokenize(text):
     tokens = word_tokenize(text)
@@ -25,9 +27,12 @@ def tokenize(text):
 
     return clean_tokens
 
+
 # load data
 engine = create_engine('sqlite:///../data/DisasterRecovery.db')
 df = pd.read_sql_table('DisasterRecovery', engine)
+
+df.related.replace(to_replace=2, value=1, inplace=True)
 
 # load model
 model = joblib.load("../models/AdaBoostClassifier_0.11.pkl")
@@ -37,12 +42,16 @@ model = joblib.load("../models/AdaBoostClassifier_0.11.pkl")
 @app.route('/')
 @app.route('/index')
 def index():
-    
     # extract data needed for visuals
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
-    
+
+    category_names = df.columns.drop(['id', 'message', 'original', 'genre'])
+    category_counts = df[category_names].sum()
+
+    category_names = [re.sub('[^a-zA-Z0-0]', ' ', category).capitalize().strip() for category in category_names]
+
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
@@ -52,6 +61,7 @@ def index():
                     x=genre_names,
                     y=genre_counts
                 )
+
             ],
 
             'layout': {
@@ -63,13 +73,35 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+        {
+            'data': [
+                Bar(
+                    y=category_names,
+                    x=category_counts,
+                    orientation='h'
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Categories',
+                'autosize': True,
+                'height': 1000,
+                'yaxis': {
+                    'automargin': True
+                },
+                'xaxis': {
+                    'title': "Count",
+                    'automargin': True
+                }
+            }
         }
     ]
-    
+
     # encode plotly graphs in JSON
     ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
@@ -78,7 +110,7 @@ def index():
 @app.route('/go')
 def go():
     # save user input in query
-    query = request.args.get('query', '') 
+    query = request.args.get('query', '')
 
     # use model to predict classification for query
     classification_labels = model.predict([query])[0]

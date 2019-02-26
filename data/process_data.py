@@ -7,8 +7,8 @@
             3. load into database as new table (will override if data is already present).
 
     Library versions:
-        sqlalchemy:1.2.1
-        Pandas:0.22.0
+        sqlalchemy: 1.2.1
+        Pandas: 0.22.0
 
     Command to run:
         python3 process_data.py disaster_messages.csv disaster_categories.csv DisasterRecovery.db
@@ -22,6 +22,23 @@ from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
+    '''
+    This method will:
+        1. Read messages and categories csv file and load them as Pandas DataFrame.
+        2. Merge messages and categories DataFrames into one df DataFrame.
+        3. Generate set of categories from the values in categories DataFrame.
+        4. Clean and convert categories columns to numeric.
+        5. Replace clean categories in df DataFrame.
+
+    :param messages_filepath:
+        Relative Filepath with file name of messages csv file.
+
+    :param categories_filepath:
+        Relative Filepath with file name of categories csv file.
+
+    :return:
+        Consolidated DataFrame.
+    '''
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
 
@@ -42,9 +59,9 @@ def load_data(messages_filepath, categories_filepath):
         # convert column from string to numeric
         categories[column] = categories[column].astype(int)
 
-    #df.drop(columns=['categories'], inplace=True)
+    # df.drop(columns=['categories'], inplace=True)
 
-    df.drop('categories',axis=1, inplace=True)
+    df.drop('categories', axis=1, inplace=True)
 
     df = pd.concat([df, categories], axis=1, join='inner')
 
@@ -52,17 +69,44 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(df):
+    '''
+        This method will drop duplicate rows from the data frame.
+
+    :param df:
+        DataFrame
+
+    :return:
+        DataFrame with no duplicate rows.
+    '''
     df.drop_duplicates(inplace=True)
 
     return df
 
 
 def save_data(df, database_filename):
+    '''
+    This method will save DataFrame to SQL DB.
+
+    :param df:
+        DataFrame
+
+    :param database_filename:
+        Relative filepath where DB instance need to be persisted.
+
+    :return:
+        None
+    '''
     engine = create_engine('sqlite:///{}'.format(database_filename))
     df.to_sql('DisasterRecovery', engine, index=False, if_exists='replace')
 
 
 def main():
+    '''
+    This is the invocation method for this Python script.
+
+    :return:
+        None
+    '''
     if len(sys.argv) == 4:
 
         messages_filepath, categories_filepath, database_filepath = sys.argv[1:]

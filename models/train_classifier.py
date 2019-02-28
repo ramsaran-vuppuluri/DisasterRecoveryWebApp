@@ -35,15 +35,19 @@ from nltk.tokenize import word_tokenize
 
 from sklearn.pipeline import Pipeline, make_union, make_pipeline
 
-from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 
-from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+
+from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sklearn.multioutput import MultiOutputClassifier
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, accuracy_score
 
 from sklearn.externals import joblib
 
@@ -126,9 +130,34 @@ def build_model():
     '''
     transformer = make_union(TfidfVectorizer(tokenizer=tokenize))
 
-    clf = AdaBoostClassifier(n_estimators=25)
+    # clf = AdaBoostClassifier(n_estimators=25)
 
-    return make_pipeline(transformer, MultiOutputClassifier(clf, n_jobs=-1))
+    clf = AdaBoostClassifier()
+
+    pipeline = Pipeline([
+        ('transformer', transformer),
+        ('classifier', MultiOutputClassifier(clf, n_jobs=-1))
+    ])
+
+    parameters = [
+        {
+            "classifier__estimator": [AdaBoostClassifier()],
+            "classifier__estimator__base_estimator": [
+                DecisionTreeClassifier(),
+                MultinomialNB()],
+            "classifier__estimator__n_estimators": [25, 35, 45]
+        },
+        {
+            "classifier__estimator": [RandomForestClassifier()],
+            "classifier__estimator__n_estimators": [25, 35, 45]
+        }
+    ]
+
+    gridSearch = GridSearchCV(pipeline, parameters, verbose=2, n_jobs=-1)
+
+    # return make_pipeline(transformer, MultiOutputClassifier(clf, n_jobs=-1))
+
+    return gridSearch
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
@@ -153,6 +182,8 @@ def evaluate_model(model, X_test, Y_test, category_names):
         None
     '''
     Y_pred = model.predict(X_test)
+
+    print(accuracy_score(y_true=Y_test, y_pred=Y_pred))
 
     print(classification_report(y_pred=Y_pred, y_true=Y_test, target_names=category_names))
 
@@ -179,11 +210,10 @@ def save_model(model, model_filepath):
     '''
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
-    version = joblib.__version__
+    joblib.dump(model,
+                model_filepath + "_{timestamp}.pkl".format(timestamp=timestamp))
 
-    joblib.dump(model, model_filepath + "_{version}_{timestamp}.pkl".format(version=version, timestamp=timestamp))
-
-    joblib.dump(model, model_filepath + "_{version}.pkl".format(version=version, timestamp=timestamp))
+    joblib.dump(model, model_filepath + ".pkl".format(timestamp=timestamp))
 
 
 def main():

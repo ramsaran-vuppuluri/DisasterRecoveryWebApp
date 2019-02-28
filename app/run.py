@@ -43,7 +43,7 @@ model = joblib.load("../models/Classifier.pkl")
 @app.route('/index')
 def index():
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
+
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
 
@@ -57,7 +57,7 @@ def index():
     category_names = [re.sub('[^a-zA-Z0-0]', ' ', category).capitalize().strip() for category in category_names]
 
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
+
     graphs = [
         {
             'data': [

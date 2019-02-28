@@ -183,7 +183,11 @@ def evaluate_model(model, X_test, Y_test, category_names):
     '''
     Y_pred = model.predict(X_test)
 
+    print('Accuracy Score...')
+
     print(accuracy_score(y_true=Y_test, y_pred=Y_pred))
+
+    print('Classification Report...')
 
     print(classification_report(y_pred=Y_pred, y_true=Y_test, target_names=category_names))
 
